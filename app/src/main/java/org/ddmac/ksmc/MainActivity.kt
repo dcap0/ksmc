@@ -1,8 +1,10 @@
 package org.ddmac.ksmc
 
+import android.content.ComponentName
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.provider.MediaStore.Audio.Media
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -21,6 +23,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.session.MediaController
+import androidx.media3.session.SessionToken
+import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.MoreExecutors
 import org.ddmac.ksmc.ui.theme.KsmcTheme
 import org.ddmac.ksmc.ui.theme.Purple40
 
@@ -29,6 +35,7 @@ class MainActivity : ComponentActivity() {
     private val url = "http://192.168.1.71:5000/p"
     lateinit var mediaPlayer: MediaPlayer
     val vm: MainViewModel by viewModels()
+    lateinit var controllerFuture: ListenableFuture<MediaController>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +65,22 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        val sessionToken =
+            SessionToken(
+                this,
+                ComponentName(this@MainActivity,PlaybackService::class.java)
+            )
+
+        controllerFuture =
+            MediaController.Builder(this,sessionToken).buildAsync().apply {
+                addListener(
+                    {}
+                    ,MoreExecutors.directExecutor()
+                )
+            }
+    }
 
 
     private fun playMedia() {
