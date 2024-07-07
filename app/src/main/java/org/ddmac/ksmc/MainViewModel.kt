@@ -23,4 +23,9 @@ class MainViewModel: ViewModel() {
             }
         }
     }
+
+    enum class PState{
+        PAUSE,
+        PLAY
+    }
 }
