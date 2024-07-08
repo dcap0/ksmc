@@ -1,12 +1,19 @@
 package org.ddmac.ksmc
 
+import android.app.ActivityManager
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 //import android.media.MediaPlayer
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.annotation.OptIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,52 +27,77 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
-
-import com.google.common.util.concurrent.MoreExecutors
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.ddmac.ksmc.ui.theme.KsmcTheme
 import org.ddmac.ksmc.ui.theme.Purple40
 
 class MainActivity : ComponentActivity() {
 
-    private val url = "http://192.168.1.71:5000/p"
-//    lateinit var mediaPlayer: MediaPlayer
-    val vm: MainViewModel by viewModels()
-    val mediaItem = MediaItem.Builder()
-        .setMediaId("ksmc")
-        .setUri(url)
-        .setMediaMetadata(
-            MediaMetadata.Builder()
-                .setTitle("KSMC").build()
-        )
-        .build()
+//    val channelId = "ksmc channel id"
+//    val channelName = "ksmc channel"
+//    private val url = "http://192.168.1.71:5000/p"
+////    lateinit var mediaPlayer: MediaPlayer
+//    val vm: MainViewModel by viewModels()
+//    val mediaItem = MediaItem.Builder()
+//        .setMediaId("ksmc")
+//        .setUri(url)
+//        .setMediaMetadata(
+//            MediaMetadata.Builder()
+//                .setTitle("KSMC").build()
+//        )
+//        .build()
 
 
-    var mediaController: MediaController? = null
+//    var mediaController: MediaController? = null
 
+    @OptIn(UnstableApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if(!isPlaybackServiceRunning()){
+            Log.d(MainActivity::class.simpleName,"Launching service.")
+
+            CoroutineScope(Dispatchers.Default).launch {
+                this@MainActivity.startForegroundService(
+                    Intent(
+                        this@MainActivity,
+                        PlaybackService::class.java
+                    )
+                )
+            }
+        }
+
         enableEdgeToEdge()
         setContent {
             KsmcTheme {
-                val selected by vm.selected.collectAsStateWithLifecycle()
-                LaunchedEffect(key1 = selected, key2 = mediaController) {
-                    if (mediaController != null) {
-                        when (selected) {
-                            1 -> {
-                                mediaController!!.play()
-                            }
-
-                            else -> {
-                                mediaController!!.pause()
-                            }
-                        }
-                    }
-                }
+//                val selected by vm.selected.collectAsStateWithLifecycle()
+//                LaunchedEffect(key1 = selected, key2 = mediaController) {
+//                    if (mediaController != null) {
+//                        when (selected) {
+//                            1 -> {
+//                                Log.d("MediaController", "play")
+//                                mediaController!!.setMediaItem(mediaItem)
+//                                mediaController!!.prepare()
+//                                mediaController!!.repeatMode = MediaController.REPEAT_MODE_ONE
+//                                mediaController!!.play()
+//                            }
+//
+//                            else -> {
+//                                mediaController!!.pause()
+//                            }
+//                        }
+//                    }
+//                }
                 Card(
                     modifier = Modifier.fillMaxSize(),
                     colors = CardColors(Purple40, Color.White, Color.Gray, Color.DarkGray)
@@ -85,29 +117,39 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(UnstableApi::class)
     override fun onStart() {
         super.onStart()
-        val sessionToken = SessionToken(
-                this,
-                ComponentName(this@MainActivity,PlaybackService::class.java)
-            )
-
-        MediaController.Builder(this,sessionToken).buildAsync().apply {
-            addListener(
-                {
-                    mediaController = this.get()
-                    mediaController!!.setMediaItem(mediaItem)
-                    mediaController!!.prepare()
-                    mediaController!!.repeatMode = MediaController.REPEAT_MODE_ONE
-                }
-                ,MoreExecutors.directExecutor()
-            )
-        }
+//        val sessionToken = SessionToken(
+//                this,
+//                ComponentName(this@MainActivity,PlaybackService::class.java)
+//            )
+//
+//        MediaController.Builder(this,sessionToken).buildAsync().apply {
+//            addListener(
+//                {
+//                    mediaController = this.get()
+//                },
+//                ContextCompat.getMainExecutor(this@MainActivity)
+//            )
+//        }
     }
 
     override fun onStop() {
         super.onStop()
-        mediaController!!.release()
+//        mediaController!!.release()
+    }
+
+    @OptIn(UnstableApi::class)
+    @Suppress("deprecation")
+    private fun isPlaybackServiceRunning(): Boolean{
+        val manager = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        manager.getRunningServices(Integer.MAX_VALUE).forEach { runningServiceInfo ->
+            if (runningServiceInfo.service::class == PlaybackService::class){
+                return true
+            }
+        }
+        return false
     }
 
 
