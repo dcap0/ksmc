@@ -32,7 +32,7 @@ class MainActivity : ComponentActivity() {
 
 //    val channelId = "ksmc channel id"
 //    val channelName = "ksmc channel"
-//    private val url = "http://192.168.1.71:5000/p"
+//    private val url = "http://192.168.0.223:5000/p"
 ////    lateinit var mediaPlayer: MediaPlayer
 //    val vm: MainViewModel by viewModels()
 //    val mediaItem = MediaItem.Builder()

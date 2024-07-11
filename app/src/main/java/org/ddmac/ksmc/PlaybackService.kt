@@ -38,7 +38,7 @@ class PlaybackService: MediaSessionService() {
 
     val mediaItem = MediaItem.Builder()
         .setMediaId("ksmc")
-        .setUri("http://192.168.1.71:5000/p")
+        .setUri("http://192.168.0.223:5000/p")
         .setMediaMetadata(
             MediaMetadata.Builder()
                 .setTitle("KSMC").build()
@@ -56,19 +56,44 @@ class PlaybackService: MediaSessionService() {
         startForeground(8378,createNotification(mediaSession))
 
         CoroutineScope(Dispatchers.Default).launch {
-            SelectedFlow("http://192.168.1.71:5000/getSelected").selected.catch {
+            SelectedFlow("http://192.168.0.223:5000/getSelected").selected.catch {
                 Log.d(SelectedFlow::class.simpleName,"Error in communication",it)
             }.collect {
                 Log.d(MainViewModel::class.simpleName, "SELECTED: $it")
                 if(it == 0){
                     withContext(Dispatchers.Main) {
-                        if(mediaSession.player.isPlaying)
-                        mediaSession.player.pause()
+                        if(mediaSession.player.isPlaying) {
+                            onUpdateNotification(mediaSession,true)
+                            mediaSession.player.apply {
+                                stop()
+                                setMediaItem(mediaItem)
+                                repeatMode = MediaController.REPEAT_MODE_ONE
+                                prepare()
+                                play()
+                            }
+                        } else {
+                            mediaSession.player.apply {
+                                setMediaItem(mediaItem)
+                                repeatMode = MediaController.REPEAT_MODE_ONE
+                                prepare()
+                                play()
+                            }
+                        }
+
                     }
                 }
                 if (it == 1){
                     withContext(Dispatchers.Main) {
-                        if(!mediaSession.player.isPlaying) {
+                        if(mediaSession.player.isPlaying) {
+                            onUpdateNotification(mediaSession,true)
+                            mediaSession.player.apply {
+                                stop()
+                                setMediaItem(mediaItem)
+                                repeatMode = MediaController.REPEAT_MODE_ONE
+                                prepare()
+                                play()
+                            }
+                        } else {
                             mediaSession.player.apply {
                                 setMediaItem(mediaItem)
                                 repeatMode = MediaController.REPEAT_MODE_ONE
