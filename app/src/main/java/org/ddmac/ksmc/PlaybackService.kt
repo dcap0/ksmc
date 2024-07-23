@@ -27,86 +27,57 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @UnstableApi
-class PlaybackService: MediaSessionService() {
+class PlaybackService : MediaSessionService() {
 
     lateinit var mediaSession: MediaSession
     lateinit var player: Player
 
 
-    val channelId = "ksmc channel id"
-    val channelName = "ksmc channel"
-
-    val mediaItem = MediaItem.Builder()
-        .setMediaId("ksmc")
-        .setUri("http://192.168.0.223:5000/p")
-        .setMediaMetadata(
-            MediaMetadata.Builder()
-                .setTitle("KSMC").build()
-        )
-        .build()
-
+    private val channelId = "ksmc channel id"
+    private val channelName = "ksmc channel"
 
     override fun onCreate() {
         super.onCreate()
         createNotificationChannel()
-        Log.d(PlaybackService::class.simpleName,"HELLO, SERVICE!")
+        Log.d(PlaybackService::class.simpleName, "HELLO, SERVICE!")
         player = ExoPlayer.Builder(this).build()
-        mediaSession = MediaSession.Builder(this,player).build()
+        mediaSession = MediaSession.Builder(this, player).build()
         this.setMediaNotificationProvider(provider)
-        startForeground(8378,createNotification(mediaSession))
+        startForeground(8378, createNotification(mediaSession))
 
         CoroutineScope(Dispatchers.Default).launch {
+            var lastSelected = 0
             SelectedFlow("http://192.168.0.223:5000/getSelected").selected.catch {
-                Log.d(SelectedFlow::class.simpleName,"Error in communication",it)
+                Log.d(SelectedFlow::class.simpleName, "Error in communication", it)
             }.collect {
-                Log.d(MainViewModel::class.simpleName, "SELECTED: $it")
-                if(it == 0){
+                Log.d(PlaybackService::class.simpleName, "SELECTED: $it")
+                if (it != lastSelected) {
+                    lastSelected = it
                     withContext(Dispatchers.Main) {
-                        if(mediaSession.player.isPlaying) {
-                            onUpdateNotification(mediaSession,true)
-                            mediaSession.player.apply {
-                                stop()
-                                setMediaItem(mediaItem)
-                                repeatMode = MediaController.REPEAT_MODE_ONE
-                                prepare()
-                                play()
-                            }
-                        } else {
-                            mediaSession.player.apply {
-                                setMediaItem(mediaItem)
-                                repeatMode = MediaController.REPEAT_MODE_ONE
-                                prepare()
-                                play()
-                            }
-                        }
-
-                    }
-                }
-                if (it == 1){
-                    withContext(Dispatchers.Main) {
-                        if(mediaSession.player.isPlaying) {
-                            onUpdateNotification(mediaSession,true)
-                            mediaSession.player.apply {
-                                stop()
-                                setMediaItem(mediaItem)
-                                repeatMode = MediaController.REPEAT_MODE_ONE
-                                prepare()
-                                play()
-                            }
-                        } else {
-                            mediaSession.player.apply {
-                                setMediaItem(mediaItem)
-                                repeatMode = MediaController.REPEAT_MODE_ONE
-                                prepare()
-                                play()
-                            }
+                        mediaSession.player.apply {
+                            stop()
+                            setMediaItem(getMediaItem(it.toString()))
+                            repeatMode = MediaController.REPEAT_MODE_ONE
+                            prepare()
+                            play()
                         }
                     }
-
                 }
             }
         }
     }
+
+
+    private fun getMediaItem(mediaId: String) =
+        MediaItem.Builder()
+            .setUri("http://192.168.0.223:5000/p")
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle("KSMC").build()
+            )
+            .setMediaId(mediaId)
+            .build()
+
 
     override fun onDestroy() {
         super.onDestroy()
@@ -117,10 +88,10 @@ class PlaybackService: MediaSessionService() {
         super.onDestroy()
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession
-        = mediaSession.also { Log.d(PlaybackService::class.simpleName,"Getting Session") }
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession =
+        mediaSession.also { Log.d(PlaybackService::class.simpleName, "Getting Session") }
 
-    val provider= object: MediaNotification.Provider{
+    val provider = object : MediaNotification.Provider {
         @SuppressLint("NotificationPermission")
         override fun createNotification(
             mediaSession: MediaSession,
@@ -128,7 +99,7 @@ class PlaybackService: MediaSessionService() {
             actionFactory: MediaNotification.ActionFactory,
             onNotificationChangedCallback: MediaNotification.Provider.Callback
         ): MediaNotification {
-            return MediaNotification(8378,createNotification(mediaSession))
+            return MediaNotification(8378, createNotification(mediaSession))
         }
 
         override fun handleCustomCommand(
@@ -151,12 +122,13 @@ class PlaybackService: MediaSessionService() {
         manager?.createNotificationChannel(serviceChannel)
     }
 
-    fun createNotification(mediaSession: MediaSession) = NotificationCompat.Builder(this@PlaybackService,channelId)
-        .setSmallIcon(R.drawable.ic_launcher_foreground)
-        .setContentTitle("")
-        .setContentText("")
-        .setStyle(MediaStyleNotificationHelper.MediaStyle(mediaSession))
-        .build()
+    fun createNotification(mediaSession: MediaSession) =
+        NotificationCompat.Builder(this@PlaybackService, channelId)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setContentTitle("")
+            .setContentText("")
+            .setStyle(MediaStyleNotificationHelper.MediaStyle(mediaSession))
+            .build()
 
 }
 
